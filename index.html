@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Maize & Potato Leaf Care Advisor</title>
+  <style>
+    :root {
+      --bg-color: #f4f6f8;
+      --card-bg: #ffffff;
+      --primary: #2e7d32;
+      --primary-hover: #1b5e20;
+      --text: #333333;
+      --border: #e0e0e0;
+      --warning-bg: #fff3cd;
+      --warning-text: #856404;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text);
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    header h1 {
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    input[type="text"], input[type="file"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      width: 100%;
+      transition: background-color 0.2s;
+    }
+
+    button:hover {
+      background-color: var(--primary-hover);
+    }
+
+    button:disabled {
+      background-color: #a5d6a7;
+      cursor: not-allowed;
+    }
+
+    .preview-container {
+      text-align: center;
+      margin-top: 15px;
+    }
+
+    .preview-container img {
+      max-width: 100%;
+      max-height: 300px;
+      border-radius: 6px;
+      display: none;
+    }
+
+    .results {
+      display: none;
+    }
+
+    .alert {
+      padding: 12px 16px;
+      background-color: var(--warning-bg);
+      color: var(--warning-text);
+      border-radius: 6px;
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+
+    .output-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    @media (min-width: 600px) {
+      .output-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .result-box {
+      border: 1px solid var(--border);
+      padding: 12px;
+      border-radius: 6px;
+      background: #fafafa;
+    }
+
+    .result-box h3 {
+      margin-top: 0;
+      font-size: 14px;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .result-value {
+      font-size: 18px;
+      font-weight: bold;
+      color: var(--primary);
+    }
+
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>Maize & Potato Leaf Care Advisor</h1>
+    <p>Upload a leaf image to test detection models and receive general leaf care guidance.</p>
+  </header>
+
+  <div class="card">
+    <div class="form-group">
+      <label for="apiKey">Roboflow API Key</label>
+      <input type="text" id="apiKey" placeholder="Enter your rotated API key here" />
+    </div>
+
+    <div class="form-group">
+      <label for="leafImage">Select Leaf Image</label>
+      <input type="file" id="leafImage" accept="image/*" />
+    </div>
+
+    <div class="preview-container">
+      <img id="imagePreview" alt="Leaf Preview" />
+    </div>
+
+    <button id="analyzeBtn" style="margin-top: 15px;">Analyze Leaf</button>
+  </div>
+
+  <div id="resultsCard" class="card results">
+    <h2>Analysis Results</h2>
+
+    <div class="alert">
+      ⚠️ <strong>Unverified Diagnosis Notice:</strong> Model predictions are preliminary visual outputs and not a guaranteed diagnostic certainty. Disease-specific treatments are withheld pending field confirmation.
+    </div>
+
+    <div class="output-grid">
+      <div class="result-box">
+        <h3>Main Model Prediction</h3>
+        <div id="mainPrediction" class="result-value">-</div>
+      </div>
+      <div class="result-box">
+        <h3>Public Corn Model</h3>
+        <div id="publicPrediction" class="result-value">-</div>
+      </div>
+      <div class="result-box">
+        <h3>Common Rust Model</h3>
+        <div id="rustPrediction" class="result-value">-</div>
+      </div>
+      <div class="result-box">
+        <h3>Damage Severity</h3>
+        <div id="damageRating" class="result-value">-</div>
+      </div>
+    </div>
+
+    <div style="margin-top: 20px;">
+      <h3>Care & Prevention Guidance</h3>
+      <div id="careGuidance" class="result-box">Processing...</div>
+    </div>
+
+    <div style="margin-top: 20px;" id="annotatedImageSection">
+      <h3>Annotated Output Image</h3>
+      <div class="preview-container">
+        <img id="annotatedImage" alt="Annotated Output" style="display:block; margin:0 auto;" />
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const WORKFLOW_URL = "https://serverless.roboflow.com/anesu-lincoln-gideon-magumbe/maize-and-potato-leaf-care-advisor-1791008570420";
+
+  const leafInput = document.getElementById('leafImage');
+  const imagePreview = document.getElementById('imagePreview');
+  const analyzeBtn = document.getElementById('analyzeBtn');
+  const resultsCard = document.getElementById('resultsCard');
+
+  let base64Image = "";
+
+  leafInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        imagePreview.src = evt.target.result;
+        imagePreview.style.display = 'inline-block';
+        base64Image = evt.target.result.split(',')[1];
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  analyzeBtn.addEventListener('click', async () => {
+    const apiKey = document.getElementById('apiKey').value.trim();
+    if (!apiKey) {
+      alert('Please enter your Roboflow API key.');
+      return;
+    }
+    if (!base64Image) {
+      alert('Please select an image file first.');
+      return;
+    }
+
+    analyzeBtn.disabled = true;
+    analyzeBtn.innerText = "Analyzing...";
+
+    try {
+      const response = await fetch(`${WORKFLOW_URL}?api_key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          inputs: {
+            image: { type: "base64", value: base64Image }
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      displayResults(data);
+    } catch (err) {
+      alert(`Error running workflow: ${err.message}`);
+    } finally {
+      analyzeBtn.disabled = false;
+      analyzeBtn.innerText = "Analyze Leaf";
+    }
+  });
+
+  function displayResults(data) {
+    resultsCard.style.display = 'block';
+    
+    // Extract workflow outputs dynamically based on available properties
+    const res = Array.isArray(data) ? data[0] : data;
+
+    if (res.output_image && res.output_image.value) {
+      document.getElementById('annotatedImage').src = "data:image/jpeg;base64," + res.output_image.value;
+    } else {
+      document.getElementById('annotatedImageSection').style.display = 'none';
+    }
+
+    // Populate predictions safely
+    document.getElementById('mainPrediction').innerText = parsePrediction(res.predictions);
+    document.getElementById('publicPrediction').innerText = parsePrediction(res.maize_dataset_model_predictions);
+    document.getElementById('rustPrediction').innerText = parsePrediction(res.common_rust_model_predictions);
+    document.getElementById('damageRating').innerText = parsePrediction(res.damage_rating_predictions) || "Unassessed";
+    
+    document.getElementById('careGuidance').innerText = res.care_guidance || "General Care: Ensure good airflow, proper soil drainage, and regular monitoring for early symptoms.";
+  }
+
+  function parsePrediction(predObj) {
+    if (!predObj) return "N/A";
+    if (predObj.predictions && predObj.predictions.length > 0) {
+      const top = predObj.predictions[0];
+      return `${top.class || top.label} (${(top.confidence * 100).toFixed(1)}%)`;
+    }
+    return "N/A";
+  }
+</script>
+</body>
+</html>
